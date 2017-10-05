@@ -1,6 +1,13 @@
+import heapq
+
+
 def dijkstra(graph, src, dest, visited=[], distances={}, predecessors={}, routing='SHP'):
     """ calculates a shortest path tree routed in src
     """
+    print visited
+    print distances
+    print predecessors
+    print routing
     # a few sanity checks
     if src not in graph:
         raise TypeError('The root of the shortest path tree cannot be found')
@@ -8,7 +15,7 @@ def dijkstra(graph, src, dest, visited=[], distances={}, predecessors={}, routin
         raise TypeError('The target of the shortest path cannot be found')
         # ending condition
     if src == dest:
-        # We build the shortest path and display it
+        #We build the shortest path and display it
         # path = []
         # pred = dest
         # while pred != None:
@@ -17,7 +24,6 @@ def dijkstra(graph, src, dest, visited=[], distances={}, predecessors={}, routin
         #
         # print('shortest path: ' + str(path) + " cost=" + str(distances[dest]))
         pass
-
     else:
         # if it is the initial  run, initializes the cost
         if not visited:
@@ -109,8 +115,9 @@ def read_workload(workload_file):
             [start, fr, to, dur] = line.split()
             start = float(start)
             dur = float(dur)
-            workload.append((start, fr, to, dur))
+            heapq.heappush(workload, (start, fr, to, dur))
     return workload
+
 
 if __name__ == "__main__":
 
@@ -122,25 +129,66 @@ if __name__ == "__main__":
     packet_rate = 2
 
     # Statistic variables
-    total_no_requests=0
-    total_no_packets=0
+    total_no_requests= 0
+    total_no_packets= 0
 
-    no_success_packets=0
-    percentage_success_packets=0.0
+    no_success_packets= 0
+    percentage_success_packets= 0.0
 
-    no_block_packets=0
-    percentage_block_packets=0.0
+    no_block_packets= 0
+    percentage_block_packets= 0.0
 
     average_hops=0.0
     average_delay=0.0
 
-
     graph = read_topology(topology_file)
     workload = read_workload(workload_file)
 
-    print workload
+    release_queue = []
 
-    # (path,cost) = dijkstra(graph, 'A', 'D')
+    while len(workload) > 0:
+        (start_request, fr_request, to_request, dur_request) = heapq.heappop(workload)
+
+        print (start_request, fr_request, to_request, dur_request)
+        while len(release_queue) > 0:
+            if start_request >= release_queue[0][0]:
+                released_work = heapq.heappop(release_queue)
+                release_capacity(graph, released_work[1])
+            else:
+                break
+
+        (path, _) = dijkstra(graph, fr_request, to_request, visited=[],visited=[], distances={}, predecessors={})
+        if check_capacity(graph, path):
+            use_capacity(graph, path)
+
+            end_time = start_request + dur_request
+            heapq.heappush(release_queue, (end_time, path))
+        else:
+            print 'BLOCKKKKK!!!'
+
+        # print ("Workload", workload)
+        # print ("Released", release_queue)
+        # print_graph(graph)
+        # print
+
+    #print workload
+
+    # print dijkstra(graph, 'A', 'D')
+    # print
+    # print
+    # print
+    # print
+    #
+    # print dijkstra(graph, 'B', 'C')
+    def temp(d=[]):
+        c = list(d)
+        print c
+        c.append("a")
+
+    temp()
+
+    temp()
+
     # print path
     # print cost
     # print_graph(graph)
@@ -148,6 +196,11 @@ if __name__ == "__main__":
     # use_capacity(graph,path)
     # print_graph(graph)
     #print read_workload(workload_file)
+
+
+    # a=heapq.heappop(workload)
+    # print a
+
 
 
 
