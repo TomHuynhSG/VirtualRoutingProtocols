@@ -9,12 +9,15 @@ def dijkstra(graph, src, dest, visited=[], distances={}, predecessors={}, routin
         # ending condition
     if src == dest:
         # We build the shortest path and display it
-        path = []
-        pred = dest
-        while pred != None:
-            path.append(pred)
-            pred = predecessors.get(pred, None)
-        print('shortest path: ' + str(path) + " cost=" + str(distances[dest]))
+        # path = []
+        # pred = dest
+        # while pred != None:
+        #     path.append(pred)
+        #     pred = predecessors.get(pred, None)
+        #
+        # print('shortest path: ' + str(path) + " cost=" + str(distances[dest]))
+        pass
+
     else:
         # if it is the initial  run, initializes the cost
         if not visited:
@@ -23,9 +26,11 @@ def dijkstra(graph, src, dest, visited=[], distances={}, predecessors={}, routin
         for neighbor in graph[src]:
             if neighbor not in visited:
                 if routing == 'SHP':
-                    distance_neighbor = graph[src][neighbor][0]
-                else:
-                    distance_neighbor = graph[src][neighbor][1]
+                    distance_neighbor = 1
+                elif routing == 'SDP':
+                    distance_neighbor = graph[src][neighbor]['delay']
+                else: #LLP
+                    distance_neighbor = 1
 
                 new_distance = distances[src] + distance_neighbor
 
@@ -45,7 +50,39 @@ def dijkstra(graph, src, dest, visited=[], distances={}, predecessors={}, routin
         dijkstra(graph, x, dest, visited, distances, predecessors)
 
 
+    path = []
+    pred = dest
+    while pred != None:
+        path.append(pred)
+        pred = predecessors.get(pred, None)
+    return (path, distances[dest])
 
+
+def grouper(input_list, n = 2):
+    for i in xrange(len(input_list) - (n - 1)):
+        yield input_list[i:i+n]
+
+def check_capacity(graph, path):
+    for fr, to in grouper(path, 2):
+        if graph[fr][to]['used'] >= graph[fr][to]['cap']:
+            return False
+    return True
+
+def release_capacity(graph, path):
+    for fr, to in grouper(path, 2):
+        graph[fr][to]['used'] -= 1
+        graph[to][fr]['used'] -= 1
+    return graph
+
+def use_capacity(graph, path):
+    for fr, to in grouper(path, 2):
+        graph[fr][to]['used'] += 1
+        graph[to][fr]['used'] += 1
+    return graph
+
+def print_graph(graph):
+    for fr in graph:
+        print fr, graph[fr]
 
 def read_topology(topology_file):
     graph ={}
@@ -55,28 +92,62 @@ def read_topology(topology_file):
             delay = int(delay)
             cap = int(cap)
             if fr in graph:
-                graph[fr][to] = (delay, cap)
+                graph[fr][to] = {'delay': delay, 'cap': cap, 'used': 0}
             else:
-                graph[fr]= {to: (delay, cap)}
+                graph[fr] = {to: {'delay': delay, 'cap': cap, 'used': 0}}
 
             if to in graph:
-                graph[to][fr] = (delay, cap)
+                graph[to][fr] = {'delay': delay, 'cap': cap, 'used': 0}
             else:
-                graph[to] = {fr: (delay, cap)}
-
+                graph[to] = {fr: {'delay': delay, 'cap': cap, 'used': 0}}
     return graph
+
+def read_workload(workload_file):
+    workload =[]
+    with open(workload_file) as work_file:
+        for line in work_file:
+            [start, fr, to, dur] = line.split()
+            start = float(start)
+            dur = float(dur)
+            workload.append((start, fr, to, dur))
+    return workload
 
 if __name__ == "__main__":
 
+    # Command line variables
     network_scheme = 'CIRCUIT'
     routing_scheme = 'SHP'
-    topology_file = 'topology.txt'
-    workload_file = 'workload.txt'
+    topology_file = 'topology_small.txt'
+    workload_file = 'workload_small.txt'
     packet_rate = 2
 
-    graph = read_topology(topology_file)
-    dijkstra(graph, 'A', 'P')
+    # Statistic variables
+    total_no_requests=0
+    total_no_packets=0
 
+    no_success_packets=0
+    percentage_success_packets=0.0
+
+    no_block_packets=0
+    percentage_block_packets=0.0
+
+    average_hops=0.0
+    average_delay=0.0
+
+
+    graph = read_topology(topology_file)
+    workload = read_workload(workload_file)
+
+    print workload
+
+    # (path,cost) = dijkstra(graph, 'A', 'D')
+    # print path
+    # print cost
+    # print_graph(graph)
+    # print check_capacity(graph,path)
+    # use_capacity(graph,path)
+    # print_graph(graph)
+    #print read_workload(workload_file)
 
 
 
