@@ -1,6 +1,5 @@
 import heapq
 
-
 def dijkstra(graph, src, dest, routing='SHP', visited=[], distances={}, predecessors={} ):
     """ calculates a shortest path tree routed in src
     """
@@ -18,7 +17,6 @@ def dijkstra(graph, src, dest, routing='SHP', visited=[], distances={}, predeces
         # while pred != None:
         #     path.append(pred)
         #     pred = predecessors.get(pred, None)
-        #
         # print('shortest path: ' + str(path) + " cost=" + str(distances[dest]))
 
         path = []
