@@ -133,6 +133,12 @@ def read_workload(workload_file):
 if __name__ == "__main__":
 
     # Command line variables
+    network_scheme = sys.argv[1]
+    routing_scheme = sys.argv[2]
+    topology_file = sys.argv[3]
+    workload_file = sys.argv[4]
+    packet_rate = int(sys.argv[5])
+    
     network_scheme = 'PACKET'
     routing_scheme = 'SHP'
     topology_file = 'topology.txt'
