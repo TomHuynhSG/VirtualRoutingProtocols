@@ -1,67 +1,56 @@
 import heapq
+import sys
 
-def dijkstra(graph, src, dest, routing='SHP', visited=[], distances={}, predecessors={} ):
-    """ calculates a shortest path tree routed in src
+def dijkstra(graph, frm, to, routing='SHP', visited=[], distances={}, predecessors={} ):
+    """ dijkstra algorithm to find the shortest path
     """
-    # a few sanity checks
-    if src not in graph:
-        raise TypeError('The root of the shortest path tree cannot be found')
-    if dest not in graph:
-        raise TypeError('The target of the shortest path cannot be found')
-        # ending condition
-    if src == dest:
-        #We build the shortest path and display it
 
-        # path = []
-        # pred = dest
-        # while pred != None:
-        #     path.append(pred)
-        #     pred = predecessors.get(pred, None)
-        # print('shortest path: ' + str(path) + " cost=" + str(distances[dest]))
+    assert frm in graph
+    assert to in graph
 
+    if frm == to:
+        # reach distination so return the path and cost
         path = []
-        pred = dest
+        pred = to
         while pred != None:
             path.append(pred)
             pred = predecessors.get(pred, None)
 
-        return (path, distances[dest])
+        return (path, distances[to])
         pass
     else:
         # if it is the initial  run, initializes the cost
         if not visited:
-            distances[src] = 0
+            distances[frm] = 0
         # visit the neighbors
-        for neighbor in graph[src]:
+        for neighbor in graph[frm]:
             if neighbor not in visited:
                 if routing == 'SHP':
                     distance_neighbor = 1
-                    new_distance = distances[src] + distance_neighbor
+                    new_distance = distances[frm] + distance_neighbor
                 elif routing == 'SDP':
-                    distance_neighbor = graph[src][neighbor]['delay']
-                    new_distance = distances[src] + distance_neighbor
+                    distance_neighbor = graph[frm][neighbor]['delay']
+                    new_distance = distances[frm] + distance_neighbor
                 else: #LLP
-                    distance_neighbor = float(graph[src][neighbor]['used'])/graph[src][neighbor]['cap']
-                    #print (src,neighbor,distance_neighbor,graph[src][neighbor]['used'],graph[src][neighbor]['cap'])
-                    if distance_neighbor > distances[src]:
+                    distance_neighbor = float(graph[frm][neighbor]['used'])/graph[frm][neighbor]['cap']
+                    if distance_neighbor > distances[frm]:
                         new_distance = distance_neighbor
                     else:
-                        new_distance = distances[src]
+                        new_distance = distances[frm]
 
                 if new_distance < distances.get(neighbor, float('inf')):
                     distances[neighbor] = new_distance
-                    predecessors[neighbor] = src
+                    predecessors[neighbor] = frm
         # mark as visited
-        visited.append(src)
-        # now that all neighbors have been visited: recurse
-        # select the non visited node with lowest distance 'x'
-        # run Dijskstra with src='x'
+        visited.append(frm)
+
+        #select the node with lowest cost
         unvisited = {}
         for k in graph:
             if k not in visited:
                 unvisited[k] = distances.get(k, float('inf'))
-        x = min(unvisited, key=unvisited.get)
-        final_path, final_distances = dijkstra(graph, x, dest, routing, visited, distances, predecessors)
+        optimal_frm = min(unvisited, key=unvisited.get)
+        final_path, final_distances = dijkstra(graph, optimal_frm, to, routing, visited, distances, predecessors)
 
     return (final_path, final_distances)
 
@@ -139,11 +128,12 @@ if __name__ == "__main__":
     workload_file = sys.argv[4]
     packet_rate = int(sys.argv[5])
     
-    network_scheme = 'PACKET'
-    routing_scheme = 'SHP'
-    topology_file = 'topology.txt'
-    workload_file = 'workload.txt'
-    packet_rate = 2
+    # network_scheme = 'PACKET'
+    # routing_scheme = 'SHP'
+    # topology_file = 'topology.txt'
+    # workload_file = 'workload.txt'
+    # packet_rate = 3
+
     link_usage = 1
 
     # Statistic variables
@@ -168,22 +158,40 @@ if __name__ == "__main__":
 
     release_queue = []
 
-    packet_propagation = 1/float(2)
-
+    packet_propagation = 1/float(packet_rate)
     total_no_requests += len(workload)
 
+    #experiment code to check out total packet in workload
+    # _total_packets=0
+    # import sys
+    # while len(workload) > 0:
+    #     (start_request, fr_request, to_request, dur_request) = heapq.heappop(workload)
+    #     _total_packets+=int(packet_rate*dur_request)
+    #
+    # print _total_packets
+    # sys.exit()
+
     while len(workload) > 0:
+
+        dropped_packet=False
+
         (start_request, fr_request, to_request, dur_request) = heapq.heappop(workload)
 
-        total_no_packets += 1
+        if network_scheme == "PACKET":
+            no_packet_per_work=1
+        else:
+            no_packet_per_work =int(packet_rate*dur_request)
+
+        total_no_packets += no_packet_per_work
 
         if network_scheme == "PACKET":
+            #break down a large request to smaller packets
             if dur_request > packet_propagation:
                 heapq.heappush(workload, (start_request + packet_propagation, fr_request, to_request,
                                           dur_request - packet_propagation))
                 dur_request = packet_propagation
-
-
+            else:
+                dropped_packet=True
 
 
         # release finished work
@@ -202,20 +210,21 @@ if __name__ == "__main__":
             end_time = start_request + dur_request
             heapq.heappush(release_queue, (end_time, path))
 
-            total_hops += get_path_hops(path)
-            total_delay += get_path_delay(path)
+            #check if the packet suppose to drop due to lack of time
+            if (dropped_packet==False):
+                total_hops += get_path_hops(path)* no_packet_per_work
+                total_delay += get_path_delay(path)* no_packet_per_work
+                no_success_packets += no_packet_per_work
+            else:
+                total_no_packets-= no_packet_per_work
 
-            no_success_packets += 1
+        else: #no capacity available so block
+            if (dropped_packet==False):
+                no_block_packets += no_packet_per_work
+            else:
+                total_no_packets-= no_packet_per_work
 
-
-
-
-        else:
-            no_block_packets +=1
-
-            #print 'BLOCKKKKK!!!'
-
-
+    #calculate statistics
     percentage_success_packets = no_success_packets / float(total_no_packets)*100
     percentage_block_packets = no_block_packets / float(total_no_packets)*100
     average_hops = total_hops/ float(no_success_packets)
@@ -224,31 +233,8 @@ if __name__ == "__main__":
     print "total number of virtual circuit requests:", total_no_requests
     print "total number of packets:", total_no_packets
     print "number of successfully routed packets:", no_success_packets
-    print "percentage of successfully routed packets:", percentage_success_packets
+    print "percentage of successfully routed packets:", "{0:.2f}".format(percentage_success_packets)
     print "number of blocked packets:", no_block_packets
-    print "percentage of blocked packets:", percentage_block_packets
-    print "average number of hops per circuit:", average_hops
-    print "average cumulative propagation delay per circuit:", average_delay
-
-
-    # print_graph(graph)
-    #print workload
-
-    #print dijkstra(graph, 'A', 'D', visited=[], distances={}, predecessors={}, routing='LLP')
-
-    # print dijkstra(graph, 'B', 'C')
-
-    # print path
-    # print cost
-    # print_graph(graph)
-    # print check_capacity(graph,path)
-    # use_capacity(graph,path)
-    # print_graph(graph)
-    #print read_workload(workload_file)
-
-    # a=heapq.heappop(workload)
-    # print a
-
-
-
-
+    print "percentage of blocked packets:", "{0:.2f}".format(percentage_block_packets)
+    print "average number of hops per circuit:", "{0:.2f}".format(average_hops)
+    print "average cumulative propagation delay per circuit:", "{0:.2f}".format(average_delay)
