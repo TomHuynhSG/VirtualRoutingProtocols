@@ -122,19 +122,19 @@ def read_workload(workload_file):
 if __name__ == "__main__":
 
     # Command line variables
-    network_scheme = sys.argv[1]
-    routing_scheme = sys.argv[2]
-    topology_file = sys.argv[3]
-    workload_file = sys.argv[4]
-    packet_rate = int(sys.argv[5])
+    # network_scheme = sys.argv[1]
+    # routing_scheme = sys.argv[2]
+    # topology_file = sys.argv[3]
+    # workload_file = sys.argv[4]
+    # packet_rate = int(sys.argv[5])
     
-    # network_scheme = 'PACKET'
-    # routing_scheme = 'SHP'
-    # topology_file = 'topology.txt'
-    # workload_file = 'workload.txt'
-    # packet_rate = 3
+    network_scheme = 'PACKET'
+    routing_scheme = 'LLP'
+    topology_file = 'topology.txt'
+    workload_file = 'workload.txt'
+    packet_rate = 4
 
-    link_usage = 1
+    link_usage = 25
 
     # Statistic variables
     total_no_requests = 0
@@ -176,6 +176,7 @@ if __name__ == "__main__":
         dropped_packet=False
 
         (start_request, fr_request, to_request, dur_request) = heapq.heappop(workload)
+        #print ("Pop",(start_request, fr_request, to_request, dur_request) )
 
         if network_scheme == "PACKET":
             no_packet_per_work=1
@@ -230,7 +231,7 @@ if __name__ == "__main__":
     average_hops = total_hops/ float(no_success_packets)
     average_delay = total_delay / float(no_success_packets)
 
-    print "total number of virtual circuit requests:", total_no_requests
+    print "total number of virtual connection requests:", total_no_requests
     print "total number of packets:", total_no_packets
     print "number of successfully routed packets:", no_success_packets
     print "percentage of successfully routed packets:", "{0:.2f}".format(percentage_success_packets)
